@@ -1,20 +1,18 @@
 import os
-import requests
 import pandas as pd
 import streamlit as st
-from bs4 import BeautifulSoup
+from firecrawl import FirecrawlApp
 
 # Streamlit UI
-st.title("Freelance Job Listings Crawler")
+st.title("Freelance AI Job Crawler")
 
-# Define target job roles and filtering keywords
-JOB_KEYWORDS = [
-    "Data Scientist", "Machine Learning", "LLM", "NLP",
-    "Machine Learning Contract", "LLM Engineer"
-]
-FREELANCE_KEYWORDS = ["contract", "freelance", "remote"]
+# Retrieve API key from Streamlit secrets
+firecrawl_api_key = st.secrets["FIRECRAWL_API_KEY"]
 
-# Define job search URLs (example sources)
+# Initialize Firecrawl API
+app = FirecrawlApp(api_key=firecrawl_api_key)
+
+# Define job search URLs
 JOB_PORTALS = [
     "https://www.upwork.com/nx/search/jobs/?q=data%20science",
     "https://www.freelancer.com/jobs/machine-learning/",
@@ -22,39 +20,36 @@ JOB_PORTALS = [
     "https://remoteok.io/remote-ai-jobs"
 ]
 
+# Define filtering keywords
+JOB_KEYWORDS = ["Data Scientist", "Machine Learning", "LLM", "NLP", "AI Engineer"]
+FREELANCE_KEYWORDS = ["contract", "freelance", "remote"]
+
 def crawl_jobs():
-    """Scrape job listings from multiple sources and filter relevant jobs."""
+    """Scrapes job listings using Firecrawl and filters relevant jobs."""
     job_listings = []
 
     for url in JOB_PORTALS:
         try:
             st.write(f"🔍 Crawling: {url}")
 
-            # Send HTTP request
-            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-            response.raise_for_status()
+            # Use Firecrawl to scrape job listings
+            scrape_result = app.scrape_url(url, params={'formats': ['markdown']})
 
-            # Parse HTML content
-            soup = BeautifulSoup(response.text, "html.parser")
+            if "markdown" not in scrape_result:
+                st.warning(f"⚠️ No data found on {url}")
+                continue
+            
+            page_content = scrape_result["markdown"].lower()
 
-            # Extract job postings (Modify selectors as per website structure)
-            job_elements = soup.find_all(["h2", "h3", "a", "div"])  # Common job title tags
-
-            for job in job_elements:
-                job_text = job.get_text(strip=True).lower()
-
-                # Check if job matches keywords and freelance filters
-                if any(keyword.lower() in job_text for keyword in JOB_KEYWORDS) and \
-                   any(filter_word in job_text for filter_word in FREELANCE_KEYWORDS):
-
-                    job_title = job.get_text(strip=True)
-                    job_link = job.find("a", href=True)
-                    job_url = job_link["href"] if job_link else url
-
-                    job_listings.append({"Title": job_title, "URL": job_url})
+            # Extract job titles from text
+            for line in page_content.split("\n"):
+                if any(keyword.lower() in line for keyword in JOB_KEYWORDS) and \
+                   any(f_word in line for f_word in FREELANCE_KEYWORDS):
+                    
+                    job_listings.append({"Job Title": line.strip(), "Source": url})
 
         except Exception as e:
-            st.error(f"Error crawling {url}: {e}")
+            st.error(f"Error scraping {url}: {e}")
 
     return job_listings
 
@@ -67,6 +62,7 @@ def save_to_excel(jobs):
     df = pd.DataFrame(jobs)
     file_path = "freelance_jobs.xlsx"
     df.to_excel(file_path, index=False)
+
     st.success(f"✅ Job listings saved to {file_path}!")
 
     # Provide download link
