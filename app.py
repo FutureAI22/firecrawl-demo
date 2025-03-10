@@ -226,6 +226,7 @@ def extract_job_listings(content, keyword, model="deepseek-r1-distill-llama-70b"
         6. URL or link to the job posting (if available)
         
         Return the listings as a JSON array of objects with these fields. Only include jobs that are clearly related to '{keyword}'.
+        Format your response as ONLY a raw JSON array with no other text, no markdown formatting, and no code blocks.
         
         Content:
         {content[:10000]}  # Limiting content length for API constraints
@@ -234,7 +235,7 @@ def extract_job_listings(content, keyword, model="deepseek-r1-distill-llama-70b"
         completion = groq_client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that specializes in extracting job listings from web content."},
+                {"role": "system", "content": "You are a helpful assistant that specializes in extracting job listings from web content. You ONLY respond with raw JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.2,
@@ -245,22 +246,74 @@ def extract_job_listings(content, keyword, model="deepseek-r1-distill-llama-70b"
         
         # Extract JSON from response
         try:
-            # Look for JSON array in the response
-            json_match = re.search(r'(\[.*\])', response_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-                job_listings = json.loads(json_str)
-                return job_listings
-            else:
-                st.warning("Could not parse JSON response. Raw output displayed instead.")
-                return [{"error": "Parsing error", "raw_content": response_text}]
+            # Clean up response to extract JSON content
+            # Remove any potential markdown code block indicators
+            response_text = re.sub(r'```json', '', response_text)
+            response_text = re.sub(r'```', '', response_text)
+            
+            # Trim leading/trailing whitespace
+            response_text = response_text.strip()
+            
+            # If response starts with explanatory text, try to find the JSON part
+            if not (response_text.startswith('[') or response_text.startswith('{')):
+                json_match = re.search(r'(\[.*\])', response_text, re.DOTALL)
+                if json_match:
+                    response_text = json_match.group(1)
+            
+            # Parse the JSON
+            job_listings = json.loads(response_text)
+            
+            # If we got a dictionary instead of a list, check if it has an array property
+            if isinstance(job_listings, dict):
+                for key in ['jobs', 'listings', 'results', 'data']:
+                    if key in job_listings and isinstance(job_listings[key], list):
+                        job_listings = job_listings[key]
+                        break
+            
+            # Ensure we have a list
+            if not isinstance(job_listings, list):
+                job_listings = [job_listings]
+                
+            return job_listings
+                
         except Exception as json_err:
-            st.warning(f"Error parsing JSON response: {str(json_err)}")
-            return [{"error": "JSON parsing error", "raw_content": response_text}]
+            # Log the error and raw response for debugging
+            st.warning(f"Could not parse JSON response. Raw output displayed instead.")
+            st.code(response_text, language="json")
+            
+            # Try to extract at least some job info from the text
+            fallback_listings = []
+            # Simple pattern to extract job title and company
+            job_patterns = re.finditer(r'(?:title|position)[:\s]*"?([^"\n]+)"?.*?(?:company)[:\s]*"?([^"\n]+)"?', 
+                                      response_text, re.IGNORECASE | re.DOTALL)
+            
+            for match in job_patterns:
+                fallback_listings.append({
+                    "job_title": match.group(1).strip(),
+                    "company_name": match.group(2).strip(),
+                    "extracted_from_text": True
+                })
+            
+            # If we found some jobs through regex, return those
+            if fallback_listings:
+                return fallback_listings
+                
+            # Otherwise, create a single dummy job listing with the raw text
+            return [{
+                "error": "JSON parsing error",
+                "job_title": "See raw response",
+                "company_name": "Unknown Company",
+                "description": f"Could not parse structured data. Error: {str(json_err)}\n\nRaw content: {response_text[:500]}..."
+            }]
             
     except Exception as e:
         st.error(f"Error extracting job listings: {str(e)}")
-        return None
+        return [{
+            "error": "Extraction error",
+            "job_title": "Error occurred",
+            "company_name": "Unknown",
+            "description": f"An error occurred while processing: {str(e)}"
+        }]
 
 # Search execution and results display
 if search_clicked:
