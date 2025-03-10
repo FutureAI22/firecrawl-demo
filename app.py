@@ -74,32 +74,28 @@ else:
     firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
     groq_api_key = os.getenv("Groq_API_KEY")
 
-# List of seed URLs for job platforms
+# Updated list of seed URLs for job platforms focused on data professionals
 JOB_PLATFORMS = {
-    "Toptal": "https://www.toptal.com/",
-    "Upwork": "https://www.upwork.com/",
-    "Fiverr": "https://www.fiverr.com/",
-    "Guru": "https://www.guru.com/",
-    "PeoplePerHour": "https://www.peopleperhour.com/",
-    "LinkedIn Jobs": "https://www.linkedin.com/jobs/",
+    "LinkedIn": "https://www.linkedin.com/",
+    "Indeed": "https://www.indeed.com/",
+    "Glassdoor": "https://www.glassdoor.com/",
+    "DataScienceJobs.com": "https://www.datasciencejobs.com/",
     "Wellfound": "https://wellfound.com/",
-    "Upstack": "https://upstack.co/",
-    "Arc": "https://arc.dev/",
-    "Turing": "https://www.turing.com/"
+    "Dice": "https://www.dice.com/",
+    "FlexJobs": "https://www.flexjobs.com/",
+    "Interview Query": "https://www.interviewquery.com/"
 }
 
-# Job search keywords and filters
+# Updated job search keywords for data professionals
 JOB_KEYWORDS = [
-    "data scientist freelance", 
-    "data scientist contract", 
-    "machine learning freelance", 
-    "machine learning contract",
-    "LLM freelance", 
-    "LLM contract", 
-    "NLP freelance", 
-    "AI engineer contract",
-    "remote data science contract",
-    "data science consultant"
+    "data scientist", 
+    "machine learning engineer", 
+    "data engineer", 
+    "AI specialist", 
+    "LLM engineer",
+    "NLP specialist", 
+    "ML engineer", 
+    "data analyst"
 ]
 
 # URL patterns that indicate job listings
@@ -120,6 +116,8 @@ def init_session_state():
         st.session_state.crawling_complete = False
     if 'progress' not in st.session_state:
         st.session_state.progress = 0
+    if 'custom_platform' not in st.session_state:
+        st.session_state.custom_platform = ""
     
     # Initialize platform checkboxes if not already set
     for platform in JOB_PLATFORMS.keys():
@@ -340,23 +338,43 @@ def generate_mock_job_listings(url, platform, limited=False):
             })
             mock_listings.append(listing2)
     
-    elif "peopleperhour" in url.lower():
+    elif "glassdoor" in url.lower():
         listing1 = base_listing.copy()
         listing1.update({
-            "job_title": "LLM Fine-tuning Specialist",
-            "description": "Looking for an expert to help fine-tune our custom language models for specific business use cases",
-            "skills_required": ["LLMs", "NLP", "PyTorch", "HuggingFace"],
-            "estimated_compensation": "£500-750 per project"
+            "job_title": "AI Research Scientist - Contract",
+            "description": "Research and develop cutting-edge AI models for a leading tech company",
+            "skills_required": ["Deep Learning", "Neural Networks", "PyTorch", "Research"],
+            "estimated_compensation": "$100-140k/year (contract)"
         })
         mock_listings.append(listing1)
         
         if not limited:
             listing2 = base_listing.copy()
             listing2.update({
-                "job_title": "Data Science Consultant for E-commerce",
-                "description": "Need help implementing predictive analytics for our online store",
-                "skills_required": ["Python", "R", "Statistical Analysis", "E-commerce"],
-                "estimated_compensation": "£40-60/hour"
+                "job_title": "Data Engineer - Remote Freelance",
+                "description": "Design and implement data pipelines for a growing startup",
+                "skills_required": ["Python", "SQL", "Spark", "Cloud Infrastructure"],
+                "estimated_compensation": "$70-90/hour"
+            })
+            mock_listings.append(listing2)
+    
+    elif "datasciencejobs" in url.lower():
+        listing1 = base_listing.copy()
+        listing1.update({
+            "job_title": "NLP Engineer - Remote Contract",
+            "description": "Develop language models and conversational AI for customer service applications",
+            "skills_required": ["NLP", "LLMs", "Python", "Transformers"],
+            "estimated_compensation": "$85-110/hour"
+        })
+        mock_listings.append(listing1)
+        
+        if not limited:
+            listing2 = base_listing.copy()
+            listing2.update({
+                "job_title": "Data Science Team Lead - 6 Month Contract",
+                "description": "Lead a team of data scientists working on recommendation systems",
+                "skills_required": ["Team Leadership", "Recommendation Systems", "Python", "Project Management"],
+                "estimated_compensation": "$120-150/hour"
             })
             mock_listings.append(listing2)
     
@@ -403,7 +421,16 @@ def crawl_job_platforms():
     error_container = st.expander("View Error Details", expanded=False)
     
     # Get selected platforms
-    platforms_to_crawl = {k: JOB_PLATFORMS[k] for k in st.session_state.selected_platforms}
+    platforms_to_crawl = {k: JOB_PLATFORMS[k] for k in st.session_state.selected_platforms if k in JOB_PLATFORMS}
+    
+    # Add custom platform if provided
+    if st.session_state.custom_platform:
+        # Add http:// prefix if not present
+        custom_url = st.session_state.custom_platform
+        if not custom_url.startswith('http'):
+            custom_url = 'https://' + custom_url
+        platforms_to_crawl["Custom Site"] = custom_url
+    
     total_platforms = len(platforms_to_crawl)
     
     # Display which platforms are being crawled
@@ -413,18 +440,18 @@ def crawl_job_platforms():
     
     # Platform-specific configurations
     platform_configs = {
-        "LinkedIn Jobs": {
+        "LinkedIn": {
             "search_url_format": "{base_url}jobs/search/?keywords={keyword}",
             "max_retries": 2,
             "throttle_seconds": 3
         },
-        "PeoplePerHour": {
-            "search_url_format": "{base_url}freelance/{keyword}-jobs",
+        "Glassdoor": {
+            "search_url_format": "{base_url}Job/jobs.htm?sc.keyword={keyword}",
             "max_retries": 2,
             "throttle_seconds": 3
         },
-        "Upwork": {
-            "search_url_format": "{base_url}search/jobs/?q={keyword}",
+        "Indeed": {
+            "search_url_format": "{base_url}jobs?q={keyword}",
             "max_retries": 3,
             "throttle_seconds": 2
         }
@@ -484,7 +511,7 @@ def crawl_job_platforms():
                                     st.warning(f"Limited content returned for {keyword} on {platform_name}")
                                 
                                 # For problematic platforms, generate mock data
-                                if platform_name in ["LinkedIn Jobs", "PeoplePerHour"]:
+                                if platform_name in ["LinkedIn", "Glassdoor", "DataScienceJobs.com"]:
                                     mock_listings = generate_mock_job_listings(search_url, platform_name)
                                     if mock_listings:
                                         platform_job_listings.extend(mock_listings)
@@ -516,7 +543,7 @@ def crawl_job_platforms():
                         st.warning(f"Failed to scrape {platform_name} for keyword '{keyword}' after {max_retries} attempts")
                     
                     # For problematic platforms, generate mock data on failure
-                    if platform_name in ["LinkedIn Jobs", "PeoplePerHour", "Upwork"]:
+                    if platform_name in ["LinkedIn", "Glassdoor", "Indeed"]:
                         mock_listings = generate_mock_job_listings(search_url, platform_name)
                         if mock_listings:
                             platform_job_listings.extend(mock_listings)
@@ -685,7 +712,7 @@ def display_job_results():
         st.download_button(
             label="Download Results as CSV",
             data=csv,
-            file_name="freelance_job_listings.csv",
+            file_name="data_professional_job_listings.csv",
             mime="text/csv"
         )
 
@@ -696,7 +723,7 @@ def build_ui():
     
     st.title("🔍 AI Freelance Job Crawler")
     st.markdown("""
-    This app crawls popular freelance platforms to find Data Science, Machine Learning, and LLM 
+    This app crawls popular job platforms to find Data Science, Machine Learning, and AI 
     contract opportunities. Select the platforms and keywords to search for.
     """)
     
@@ -714,119 +741,4 @@ def build_ui():
         </div>
         """, unsafe_allow_html=True)
     
-    # Sidebar for configuration
-    with st.sidebar:
-        st.header("Search Configuration")
-        
-        # Platform selection with more control
-        st.subheader("Select Platforms to Search")
-        
-        # Checkboxes for each platform for more interactive selection
-        platform_cols = st.columns(2)
-        selected_platforms = []
-        
-        for i, platform in enumerate(JOB_PLATFORMS.keys()):
-            col_idx = i % 2
-            with platform_cols[col_idx]:
-                if st.checkbox(platform, value=(i < 3), key=f"platform_{platform}"):
-                    selected_platforms.append(platform)
-        
-        # Update session state with selected platforms
-        st.session_state.selected_platforms = selected_platforms
-        
-        # Quick selection buttons
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Select All"):
-                for platform in JOB_PLATFORMS.keys():
-                    st.session_state[f"platform_{platform}"] = True
-                st.experimental_rerun()
-        with col2:
-            if st.button("Deselect All"):
-                for platform in JOB_PLATFORMS.keys():
-                    st.session_state[f"platform_{platform}"] = False
-                st.experimental_rerun()
-        with col3:
-            if st.button("Top 3"):
-                for i, platform in enumerate(JOB_PLATFORMS.keys()):
-                    st.session_state[f"platform_{platform}"] = (i < 3)
-                st.experimental_rerun()
-        
-        # Keyword selection
-        st.subheader("Select Search Keywords")
-        st.session_state.selected_keywords = st.multiselect(
-            "Job Keywords",
-            options=JOB_KEYWORDS,
-            default=JOB_KEYWORDS[:3]  # Default to first 3 keywords
-        )
-        
-        # Custom keyword input
-        custom_keyword = st.text_input("Add Custom Keyword")
-        if custom_keyword and st.button("Add Keyword"):
-            if custom_keyword not in st.session_state.selected_keywords:
-                st.session_state.selected_keywords.append(custom_keyword)
-                st.experimental_rerun()
-        
-        # Search button
-        if st.button("Search for Jobs", type="primary"):
-            st.session_state.job_results = []
-            st.session_state.crawling_complete = False
-            st.session_state.progress = 0
-    
-    # Main content area
-    tab1, tab2 = st.tabs(["Search", "Results"])
-    
-    with tab1:
-        # Search tab
-        st.header("Search Configuration")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Selected Platforms")
-            if st.session_state.selected_platforms:
-                for platform in st.session_state.selected_platforms:
-                    st.write(f"- {platform}")
-            else:
-                st.warning("No platforms selected. Please select at least one platform from the sidebar.")
-        
-        with col2:
-            st.subheader("Selected Keywords")
-            for keyword in st.session_state.selected_keywords:
-                st.write(f"- {keyword}")
-        
-        st.markdown("---")
-        
-        # Start search button (main area)
-        if st.button("Start Job Search", type="primary", key="main_search"):
-            if not st.session_state.selected_platforms:
-                st.error("Please select at least one platform from the sidebar before starting the search.")
-            else:
-                with st.spinner("Crawling job platforms..."):
-                    crawl_job_platforms()
-        
-        # Show progress if crawling
-        if not st.session_state.crawling_complete and st.session_state.progress > 0:
-            st.progress(st.session_state.progress)
-    
-    with tab2:
-        # Results tab
-        st.header("Job Listings Results")
-        
-        # If crawling is complete, display results
-        if st.session_state.crawling_complete:
-            display_job_results()
-        elif st.session_state.job_results:
-            display_job_results()
-        else:
-            st.info("Run a search to see results.")
-
-def main():
-    """Main function to run the app"""
-    # Initialize session state
-    init_session_state()
-    
-    # Build the UI
-    build_ui()
-
-if __name__ == "__main__":
-    main()
+    #
