@@ -1,6 +1,7 @@
 import os
 from firecrawl import FirecrawlApp
 from groq import Groq
+import streamlit as st
 from dotenv import load_dotenv
 
 # ANSI color codes for pretty terminal output
@@ -17,8 +18,12 @@ class Colors:
 load_dotenv()
 
 # Retrieve API keys from environment variables
-firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
-groq_api_key = os.getenv("Groq_API_KEY")
+#firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+#groq_api_key = os.getenv("Groq_API_KEY")
+
+# Retrieve API keys from streamlit secrets
+firecrawl_api_key = st.secrets["FIRECRAWL_API_KEY"]
+groq_api_key = st.secrets["Groq_API_KEY"]
 
 # Initialize the FirecrawlApp and Groq client
 app = FirecrawlApp(api_key=firecrawl_api_key)
