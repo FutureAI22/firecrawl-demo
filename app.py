@@ -32,16 +32,40 @@ else:
     st.error("API keys not found. Please set up your API keys in Streamlit secrets or environment variables.")
     st.stop()
 
-# Define the job platforms
+# Define the job platforms with descriptions
 job_platforms = {
-    "LinkedIn": "linkedin.com",
-    "Indeed": "indeed.com",
-    "Glassdoor": "glassdoor.com",
-    "DataScienceJobs": "datasciencejobs.com",
-    "Wellfound": "wellfound.com",
-    "Dice": "dice.com",
-    "FlexJobs": "flexjobs.com",
-    "Interview Query": "interviewquery.com"
+    "LinkedIn": {
+        "url": "linkedin.com",
+        "description": "This is crucial. It's where many data science and AI recruiters actively search for talent."
+    },
+    "Indeed": {
+        "url": "indeed.com",
+        "description": "A broad platform, but with powerful filters to pinpoint data-specific roles."
+    },
+    "Glassdoor": {
+        "url": "glassdoor.com",
+        "description": "Valuable for researching company culture and salary data, essential in the competitive data field."
+    },
+    "DataScienceJobs": {
+        "url": "datasciencejobs.com",
+        "description": "A specialized platform focusing solely on data science, analytics, and AI roles. This site is very focused on the data science niche."
+    },
+    "Wellfound": {
+        "url": "wellfound.com",
+        "description": "Excellent for finding data roles in startups and innovative tech companies. This is a great place to find jobs in companies that are doing cutting edge AI work."
+    },
+    "Dice": {
+        "url": "dice.com",
+        "description": "A long-standing tech-focused job board, with a strong presence in data and IT."
+    },
+    "FlexJobs": {
+        "url": "flexjobs.com",
+        "description": "For those seeking remote or flexible data positions, this site is a valuable resource."
+    },
+    "Interview Query": {
+        "url": "interviewquery.com",
+        "description": "This site not only has a job board, but also has very valuable information to help people prepare for data science interviews."
+    }
 }
 
 # Sidebar for search configuration
@@ -50,28 +74,58 @@ st.sidebar.header("Search Configuration")
 # Platform selection
 st.sidebar.subheader("Select Platforms to Search")
 selected_platforms = {}
-for platform_name, platform_url in job_platforms.items():
+for platform_name, platform_info in job_platforms.items():
+    platform_url = platform_info["url"]
     selected_platforms[platform_name] = st.sidebar.checkbox(f"{platform_name} ({platform_url})", value=False)
 
-# Custom platform input
+# Initialize session state for custom platforms
+if 'custom_platforms' not in st.session_state:
+    st.session_state.custom_platforms = []
+
+# Custom platform input - URL only
 st.sidebar.subheader("Add Custom Platform")
-custom_platform_name = st.sidebar.text_input("Platform Name")
 custom_platform_url = st.sidebar.text_input("Platform URL")
 if st.sidebar.button("Add Custom Platform"):
-    if custom_platform_name and custom_platform_url:
+    if custom_platform_url:
+        # Extract domain name for platform name
+        domain = re.sub(r'^https?://', '', custom_platform_url)
+        domain = domain.split('/')[0]
+        custom_platform_name = domain
+        
         # Ensure URL has protocol
         if not custom_platform_url.startswith('http'):
             custom_platform_url = 'https://' + custom_platform_url
-        job_platforms[custom_platform_name] = custom_platform_url
+            
+        # Add to session state for persistence
+        custom_platform = {
+            "name": custom_platform_name,
+            "url": custom_platform_url,
+            "description": "Custom added platform"
+        }
+        
+        if custom_platform not in st.session_state.custom_platforms:
+            st.session_state.custom_platforms.append(custom_platform)
+            
+        # Also add to job_platforms for display
+        job_platforms[custom_platform_name] = {"url": custom_platform_url, "description": "Custom added platform"}
         selected_platforms[custom_platform_name] = True
         st.sidebar.success(f"Added {custom_platform_name}")
     else:
-        st.sidebar.error("Please enter both platform name and URL")
+        st.sidebar.error("Please enter platform URL")
 
-# Keyword selection
+# Keyword selection with expanded list
 st.sidebar.subheader("Search Keywords")
-default_keywords = ["data scientist", "machine learning engineer", "data engineer", "AI engineer", "LLM developer", 
-                    "data analytics", "business BI", "data visualisation", "Power BI"]
+default_keywords = [
+    "data scientist", 
+    "machine learning engineer", 
+    "data engineer", 
+    "AI engineer", 
+    "LLM developer", 
+    "data analytics", 
+    "business BI", 
+    "data visualisation", 
+    "Power BI"
+]
 selected_keywords = []
 
 for keyword in default_keywords:
@@ -85,22 +139,6 @@ if st.sidebar.button("Add Keyword"):
         selected_keywords.append(custom_keyword)
         st.sidebar.success(f"Added '{custom_keyword}' to search keywords")
 
-# Platform selection buttons
-col1, col2, col3 = st.sidebar.columns(3)
-with col1:
-    if st.button("Select All", key="select_all_platforms"):
-        for platform in job_platforms:
-            selected_platforms[platform] = True
-with col2:
-    if st.button("Deselect All", key="deselect_all_platforms"):
-        for platform in job_platforms:
-            selected_platforms[platform] = False
-with col3:
-    if st.button("Top 3", key="top_3_platforms"):
-        top_platforms = ["LinkedIn", "Indeed", "Wellfound"]
-        for platform in job_platforms:
-            selected_platforms[platform] = platform in top_platforms
-
 # Search button
 search_clicked = st.sidebar.button("Search for Jobs", type="primary")
 
@@ -112,13 +150,22 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Selected Platforms")
+    # Get standard selected platforms
     selected_platform_list = [platform for platform, selected in selected_platforms.items() if selected]
     
-    if selected_platform_list:
-        for platform in selected_platform_list:
-            st.markdown(f"• {platform}")
+    # Get custom platforms from session state
+    custom_platform_list = [p["name"] for p in st.session_state.get('custom_platforms', [])]
+    
+    # Combine both lists
+    all_platforms = selected_platform_list + [p for p in custom_platform_list if p not in selected_platform_list]
+    
+    if all_platforms:
+        for platform in all_platforms:
+            if platform in job_platforms:
+                platform_info = job_platforms[platform]
+                st.markdown(f"• **{platform}** ({platform_info['url']})")
     else:
-        st.info("No platforms selected. Please select at least one platform from the sidebar.")
+        st.info("No platforms selected. Please select at least one platform from the sidebar or add a custom platform.")
 
 with col2:
     st.subheader("Selected Keywords")
@@ -220,8 +267,14 @@ if search_clicked:
     # Validate search inputs
     active_platforms = [platform for platform, selected in selected_platforms.items() if selected]
     
-    if not active_platforms:
-        st.error("Please select at least one platform to search.")
+    # Check if there are custom platforms added outside the selected_platforms dict
+    custom_platforms = st.session_state.get('custom_platforms', [])
+    
+    # Include all custom platforms in the active platforms list
+    active_platforms.extend(custom_platforms)
+    
+    if not active_platforms and not custom_platforms:
+        st.error("Please select at least one platform to search or add a custom platform.")
     elif not selected_keywords:
         st.error("Please select at least one keyword to search for.")
     else:
@@ -238,7 +291,18 @@ if search_clicked:
         
         # Search each platform for each keyword
         for platform in active_platforms:
-            platform_url = job_platforms[platform]
+            # Handle both regular and custom platforms
+            if platform in job_platforms:
+                platform_url = job_platforms[platform]["url"]
+            else:
+                # Check in custom platforms
+                custom_platform = next((p for p in st.session_state.get('custom_platforms', []) if p["name"] == platform), None)
+                if custom_platform:
+                    platform_url = custom_platform["url"]
+                else:
+                    # Skip if platform not found
+                    continue
+                    
             if not platform_url.startswith('http'):
                 platform_url = 'https://' + platform_url
                 
@@ -309,7 +373,8 @@ if search_clicked:
                     mime="application/json"
                 )
 else:
-    st.info("Configure your search parameters in the sidebar and click 'Search for Jobs' to start.")
+    # No informational message, as requested
+    st.write("")
 
 # Footer
 st.sidebar.markdown("---")
