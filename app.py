@@ -70,7 +70,8 @@ if st.sidebar.button("Add Custom Platform"):
 
 # Keyword selection
 st.sidebar.subheader("Search Keywords")
-default_keywords = ["data scientist", "machine learning engineer", "data engineer", "AI engineer", "LLM developer"]
+default_keywords = ["data scientist", "machine learning engineer", "data engineer", "AI engineer", "LLM developer", 
+                    "data analytics", "business BI", "data visualisation", "Power BI"]
 selected_keywords = []
 
 for keyword in default_keywords:
