@@ -1,5 +1,14 @@
 import os
 import streamlit as st
+
+# Set page config must be the first Streamlit command
+st.set_page_config(
+    page_title="AI Freelance Job Crawler",
+    page_icon="🔍",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import pandas as pd
 import json
 from firecrawl import FirecrawlApp
@@ -7,13 +16,6 @@ from groq import Groq
 from dotenv import load_dotenv
 import time
 import re
-
-# Set page config
-st.set_page_config(
-    page_title="AI Freelance Job Crawler",
-    page_icon="🔍",
-    layout="wide"
-)
 
 # Load environment variables (for local development)
 load_dotenv()
@@ -820,14 +822,6 @@ def build_ui():
 
 def main():
     """Main function to run the app"""
-    # Set wider layout
-    st.set_page_config(
-        page_title="AI Freelance Job Crawler",
-        page_icon="🔍",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
     # Initialize session state
     init_session_state()
     
