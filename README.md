@@ -1,66 +1,60 @@
 # AI Freelance Job Crawler
 
-This Streamlit app crawls popular freelance platforms to find Data Science, Machine Learning, and LLM contract opportunities.
+An app that crawls popular job platforms to find Data Science, Machine Learning, and LLM contract opportunities.
 
 ## Features
 
-- **Platform-Specific Crawling**: Crawl 10 popular job platforms like Toptal, Upwork, LinkedIn and more
-- **Target Job Categories**: Focus on data science, machine learning, and LLM freelance contracts
-- **Advanced Filtering**: Filter job listings by platform, job type, and other criteria
-- **Error Handling**: Robust error handling for API limitations and rate limiting
-- **Sample Results**: Generates sample results when sites block web crawlers
+- Search across multiple job platforms including LinkedIn, Indeed, Glassdoor, and more
+- Add custom platforms to search
+- Search for specific keywords related to data science and AI roles
+- Extract and display relevant job listings
+- Export search results as JSON
 
 ## Setup
 
-### Prerequisites
-
-- Python 3.7+
-- Streamlit
-- Firecrawl API Key
-- Groq API Key
-
-### Installation
+### Local Development
 
 1. Clone this repository
-2. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
+2. Create a `.env` file with your API keys:
+```
+FIRECRAWL_API_KEY=your_firecrawl_api_key
+Groq_API_KEY=your_groq_api_key
+```
+3. Install dependencies:
+```
+pip install -r requirements.txt
+```
+4. Run the app:
+```
+streamlit run app.py
+```
 
-3. Set up your API keys:
-   - For local development: Create a `.env` file with:
-     ```
-     FIRECRAWL_API_KEY=your_key_here
-     Groq_API_KEY=your_key_here
-     ```
-   - For Streamlit Cloud: Add these as secrets in the Streamlit Cloud dashboard
+### Deployment on Streamlit Cloud
 
-4. Run the app locally:
+1. Push this repository to GitHub
+2. Log in to [Streamlit Cloud](https://streamlit.io/cloud)
+3. Create a new app pointing to your GitHub repository
+4. Add your API keys in the Streamlit Cloud secrets management:
+   - Go to your app settings
+   - Find the "Secrets" section
+   - Add the following:
    ```
-   streamlit run app.py
+   FIRECRAWL_API_KEY=your_firecrawl_api_key
+   Groq_API_KEY=your_groq_api_key
    ```
+5. Deploy your app
+
+## API Requirements
+
+This app requires:
+- A Firecrawl API key for web scraping
+- A Groq API key for content analysis
 
 ## Usage
 
-1. Select which job platforms to crawl from the sidebar
-2. Choose or add custom keywords for your job search
-3. Click "Start Job Search" to begin the crawling process
-4. View results in the Results tab
-5. Filter results by platform, job type, or exclude sample results
-6. Download results as CSV for further analysis
-
-## Known Limitations
-
-- Some platforms like LinkedIn and PeoplePerHour have stronger anti-crawling measures
-- The app generates sample results when websites block web crawlers
-- API rate limits may restrict the number of searches you can perform
-
-## Troubleshooting
-
-- If you encounter API errors, try reducing the number of platforms and keywords
-- Use the "View Error Details" expander to see specific error messages
-- For persistent API issues, try increasing the delay between requests in the code
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+1. Select the job platforms you want to search from the sidebar
+2. Add any custom platforms if needed
+3. Select or add search keywords
+4. Click "Search for Jobs" to start the search
+5. View the results organized by platform and keyword
+6. Export the results as JSON if desired
