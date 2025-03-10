@@ -1,5 +1,5 @@
-firecrawl-py
-groq
-python-dotenv
-
+streamlit>=1.30.0
+firecrawl>=0.1.0
+groq>=0.4.0
+python-dotenv>=1.0.0
 
