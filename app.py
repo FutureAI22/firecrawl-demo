@@ -18,7 +18,7 @@ load_dotenv()
 
 # Retrieve API keys from environment variables
 firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
-groq_api_key = os.getenv("GROQ_API_KEY")
+groq_api_key = os.getenv("Groq_API_KEY")
 
 # Initialize the FirecrawlApp and Groq client
 app = FirecrawlApp(api_key=firecrawl_api_key)
