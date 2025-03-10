@@ -267,11 +267,16 @@ if search_clicked:
     # Validate search inputs
     active_platforms = [platform for platform, selected in selected_platforms.items() if selected]
     
-    # Check if there are custom platforms added outside the selected_platforms dict
-    custom_platforms = st.session_state.get('custom_platforms', [])
+    # Get custom platforms from session state - ensure it's a list of dictionaries with proper structure
+    custom_platforms = []
+    for p in st.session_state.get('custom_platforms', []):
+        if isinstance(p, dict) and 'name' in p and 'url' in p:
+            custom_platforms.append(p)
     
-    # Include all custom platforms in the active platforms list
-    active_platforms.extend(custom_platforms)
+    # Include custom platforms in active platforms list
+    for custom_platform in custom_platforms:
+        if custom_platform["name"] not in active_platforms:
+            active_platforms.append(custom_platform)
     
     if not active_platforms and not custom_platforms:
         st.error("Please select at least one platform to search or add a custom platform.")
@@ -291,65 +296,75 @@ if search_clicked:
         
         # Search each platform for each keyword
         for platform in active_platforms:
-            # Handle both regular and custom platforms
-            if platform in job_platforms:
-                platform_url = job_platforms[platform]["url"]
-            else:
-                # Check in custom platforms
-                custom_platform = next((p for p in st.session_state.get('custom_platforms', []) if p["name"] == platform), None)
-                if custom_platform:
-                    platform_url = custom_platform["url"]
-                else:
-                    # Skip if platform not found
+            try:
+                # Handle both regular and custom platforms
+                platform_url = None
+                platform_name = None
+                
+                # Check if it's a string (name) or dictionary (custom platform object)
+                if isinstance(platform, str):
+                    platform_name = platform
+                    if platform in job_platforms:
+                        platform_url = job_platforms[platform]["url"]
+                elif isinstance(platform, dict):
+                    platform_name = platform.get("name")
+                    platform_url = platform.get("url")
+                
+                if not platform_url:
+                    # Skip if platform URL not found
+                    st.warning(f"Skipping platform {platform_name}: Missing URL")
                     continue
                     
-            if not platform_url.startswith('http'):
-                platform_url = 'https://' + platform_url
+                if not platform_url.startswith('http'):
+                    platform_url = 'https://' + platform_url
                 
-            platform_results = {}
-            
-            for keyword in selected_keywords:
-                search_count += 1
-                progress_bar.progress(search_count / total_searches)
+                platform_results = {}
                 
-                st.subheader(f"Searching {platform} for '{keyword}'")
-                
-                # Scrape the website
-                scrape_result = scrape_website(platform_url, keyword)
-                
-                if scrape_result and 'markdown' in scrape_result:
-                    content = scrape_result['markdown']
+                for keyword in selected_keywords:
+                    search_count += 1
+                    progress_bar.progress(search_count / total_searches)
                     
-                    # Extract job listings
-                    job_listings = extract_job_listings(content, keyword)
+                    st.subheader(f"Searching {platform_name} for '{keyword}'")
                     
-                    if job_listings and len(job_listings) > 0:
-                        platform_results[keyword] = job_listings
+                    # Scrape the website
+                    scrape_result = scrape_website(platform_url, keyword)
+                    
+                    if scrape_result and 'markdown' in scrape_result:
+                        content = scrape_result['markdown']
                         
-                        # Display results for this keyword
-                        st.write(f"Found {len(job_listings)} potential matches for '{keyword}' on {platform}:")
+                        # Extract job listings
+                        job_listings = extract_job_listings(content, keyword)
                         
-                        for i, job in enumerate(job_listings):
-                            with st.expander(f"{i+1}. {job.get('job_title', 'Unnamed Position')} - {job.get('company_name', 'Unknown Company')}"):
-                                st.write(f"**Job Title:** {job.get('job_title', 'N/A')}")
-                                st.write(f"**Company:** {job.get('company_name', 'N/A')}")
-                                st.write(f"**Location:** {job.get('location', 'N/A')}")
-                                st.write(f"**Job Type:** {job.get('job_type', 'N/A')}")
-                                
-                                if 'description' in job and job['description']:
-                                    st.write("**Description:**")
-                                    st.write(job['description'])
-                                
-                                if 'url' in job and job['url']:
-                                    st.write(f"**Link:** [{job['url']}]({job['url']})")
+                        if job_listings and len(job_listings) > 0:
+                            platform_results[keyword] = job_listings
+                            
+                            # Display results for this keyword
+                            st.write(f"Found {len(job_listings)} potential matches for '{keyword}' on {platform_name}:")
+                            
+                            for i, job in enumerate(job_listings):
+                                with st.expander(f"{i+1}. {job.get('job_title', 'Unnamed Position')} - {job.get('company_name', 'Unknown Company')}"):
+                                    st.write(f"**Job Title:** {job.get('job_title', 'N/A')}")
+                                    st.write(f"**Company:** {job.get('company_name', 'N/A')}")
+                                    st.write(f"**Location:** {job.get('location', 'N/A')}")
+                                    st.write(f"**Job Type:** {job.get('job_type', 'N/A')}")
+                                    
+                                    if 'description' in job and job['description']:
+                                        st.write("**Description:**")
+                                        st.write(job['description'])
+                                    
+                                    if 'url' in job and job['url']:
+                                        st.write(f"**Link:** [{job['url']}]({job['url']})")
+                        else:
+                            st.info(f"No job listings found for '{keyword}' on {platform_name}.")
                     else:
-                        st.info(f"No job listings found for '{keyword}' on {platform}.")
-                else:
-                    st.warning(f"Failed to scrape {platform} for '{keyword}'.")
-            
-            # Store results for this platform
-            if platform_results:
-                all_results[platform] = platform_results
+                        st.warning(f"Failed to scrape {platform_name} for '{keyword}'.")
+                
+                # Store results for this platform
+                if platform_results:
+                    all_results[platform_name] = platform_results
+            except Exception as e:
+                st.error(f"Error processing platform {platform}: {str(e)}")
+                continue
         
         # Complete the progress bar
         progress_bar.progress(1.0)
